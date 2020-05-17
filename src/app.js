@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
+import querystring from "querystring";
 import GraphiQL from "graphiql";
 import GraphiQLExplorer from "graphiql-explorer";
 import { getIntrospectionQuery, buildClientSchema, parse } from "graphql";
@@ -12,29 +13,7 @@ import "whatwg-fetch";
 import "graphiql/graphiql.css";
 import "./app.css";
 
-const parameters = {};
-window.location.search
-  .substr(1)
-  .split(`&`)
-  .forEach(function (entry) {
-    var eq = entry.indexOf(`=`);
-    if (eq >= 0) {
-      parameters[decodeURIComponent(entry.slice(0, eq))] = decodeURIComponent(
-        entry.slice(eq + 1)
-      );
-    }
-  });
-// Produce a Location query string from a parameter object.
-function locationQuery(params) {
-  return (
-    `?` +
-    Object.keys(params)
-      .map(function (key) {
-        return encodeURIComponent(key) + `=` + encodeURIComponent(params[key]);
-      })
-      .join(`&`)
-  );
-}
+const parameters = querystring.decode(window.location.search.substr(1));
 
 // Derive a fetch URL from the current URL, sans the GraphQL parameters.
 const graphqlParamNames = {
@@ -49,7 +28,7 @@ for (var k in parameters) {
     otherParams[k] = parameters[k];
   }
 }
-const fetchURL = locationQuery(otherParams);
+const fetchURL = "?" + querystring.encode(otherParams);
 
 function graphQLFetcher(graphQLParams) {
   return fetch(fetchURL, {
@@ -69,14 +48,15 @@ function graphQLFetcher(graphQLParams) {
 // that it can be easily shared.
 function onEditVariables(newVariables) {
   parameters.variables = newVariables;
-  updateURL();
+  updateQueryString(parameters);
 }
 function onEditOperationName(newOperationName) {
   parameters.operationName = newOperationName;
-  updateURL();
+  updateQueryString(parameters);
 }
-function updateURL() {
-  history.replaceState(null, null, locationQuery(parameters));
+
+function updateQueryString(params) {
+  window.history.replaceState(null, null, "?" + querystring.encode(params));
 }
 
 // We control query, so we need to recreate initial query text that show up
@@ -262,7 +242,7 @@ class App extends React.Component {
 
   _handleEditQuery = (query) => {
     parameters.query = query;
-    updateURL();
+    updateQueryString(parameters);
     this.setState({ query });
   };
 
@@ -275,7 +255,7 @@ class App extends React.Component {
       );
     }
     parameters.explorerIsOpen = newExplorerIsOpen;
-    updateURL();
+    updateQueryString(parameters);
     this.setState({ explorerIsOpen: newExplorerIsOpen });
   };
 
