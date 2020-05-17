@@ -15,7 +15,7 @@ import "./app.css";
 
 const parameters = querystring.decode(window.location.search.substr(1));
 
-function fetcher({ url, wsUrl, wsProtocols }) {
+function createFetcher({ url, wsUrl, wsProtocols }) {
   const defaultFetcher = (params) => {
     return fetch(url, {
       method: "POST",
@@ -58,39 +58,11 @@ function updateQueryString(params) {
   window.history.replaceState(null, null, "?" + querystring.encode(params));
 }
 
-// We control query, so we need to recreate initial query text that show up
-// on visiting graphiql - in order it will be
-//  - query from query string (if set)
-//  - query stored in localStorage (which graphiql set when closing window)
-//  - default empty query
-const DEFAULT_QUERY =
-  parameters.query ||
-  (window.localStorage && window.localStorage.getItem("graphiql:query")) ||
-  null;
+function getLocalStorage(key) {
+  return (window.localStorage && window.localStorage.getItem(key)) || null;
+}
 
-const DEFAULT_VARIABLES =
-  parameters.variables ||
-  (window.localStorage && window.localStorage.getItem("graphiql:variables")) ||
-  null;
-
-const QUERY_EXAMPLE_SITEMETADATA_TITLE = `#     {
-#       site {
-#         siteMetadata {
-#           title
-#         }
-#       }
-#     }`;
-
-const QUERY_EXAMPLE_FALLBACK = `#     {
-#       allSitePage {
-#         nodes {
-#           path
-#         }
-#       }
-#     }`;
-
-function generateDefaultFallbackQuery(queryExample) {
-  return `# Welcome to GraphiQL
+const DEFAULT_QUERY = `# Welcome to GraphiQL
 #
 # GraphiQL is an in-browser tool for writing, validating, and
 # testing GraphQL queries.
@@ -104,7 +76,11 @@ function generateDefaultFallbackQuery(queryExample) {
 #
 # An example GraphQL query might look like:
 #
-${queryExample}
+#     {
+#       field(arg: "value") {
+#         subField
+#       }
+#     }
 #
 # Keyboard shortcuts:
 #
@@ -117,65 +93,42 @@ ${queryExample}
 #   Auto Complete:  Ctrl-Space (or just start typing)
 #
 `;
+
+function explorerIsOpen(params) {
+  if (params.explorerIsOpen === "undefined") {
+    return getLocalStorage("graphiql:graphiqlExplorerOpen") !== "false";
+  } else {
+    return params.explorerIsOpen !== "false";
+  }
 }
-
-const storedExplorerPaneState =
-  typeof parameters.explorerIsOpen !== "undefined"
-    ? parameters.explorerIsOpen === "false"
-      ? false
-      : true
-    : window.localStorage
-    ? window.localStorage.getItem("graphiql:graphiqlExplorerOpen") !== "false"
-    : true;
-
 class App extends React.Component {
+  // Priority order of the query/variables that show up on opening the page:
+  // - query from query string (if set)
+  // - query stored in localStorage (which graphiql sets when closing window)
+  // - default empty query
+
+  // TODO: Don't depend on global `parameters` state
   state = {
     schema: null,
-    query: DEFAULT_QUERY,
-    variables: DEFAULT_VARIABLES,
-    explorerIsOpen: storedExplorerPaneState,
+    query:
+      this.props.query || parameters.query || getLocalStorage("graphiql:query"),
+    variables:
+      this.props.variables ||
+      parameters.variables ||
+      getLocalStorage("graphiql:variables"),
+    explorerIsOpen: this.props.explorerIsOpen || explorerIsOpen(parameters),
   };
 
   componentDidMount() {
-    this.props
-      .fetcher({
-        query: getIntrospectionQuery(),
-      })
-      .then((result) => {
-        const newState = { schema: buildClientSchema(result.data) };
+    this.props.fetcher({ query: getIntrospectionQuery() }).then((result) => {
+      const newState = { schema: buildClientSchema(result.data) };
 
-        if (this.state.query === null) {
-          try {
-            const siteMetadataType = result.data.__schema.types.find(
-              (type) =>
-                type.name === "SiteSiteMetadata" && type.kind === "OBJECT"
-            );
-            if (siteMetadataType) {
-              const titleField = siteMetadataType.fields.find(
-                (field) =>
-                  field.name === "title" &&
-                  field.type &&
-                  field.type.kind === "SCALAR" &&
-                  field.type.name === "String"
-              );
+      if (this.state.query === null) {
+        newState.query = DEFAULT_QUERY;
+      }
 
-              if (titleField) {
-                newState.query = generateDefaultFallbackQuery(
-                  QUERY_EXAMPLE_SITEMETADATA_TITLE
-                );
-              }
-            }
-            // eslint-disable-next-line no-empty
-          } catch {}
-          if (!newState.query) {
-            newState.query = generateDefaultFallbackQuery(
-              QUERY_EXAMPLE_FALLBACK
-            );
-          }
-        }
-
-        this.setState(newState);
-      });
+      this.setState(newState);
+    });
 
     const editor = this._graphiql.getQueryEditor();
     editor.setOption("extraKeys", {
@@ -312,7 +265,7 @@ class App extends React.Component {
 }
 
 // TODO: Configurable
-const f = fetcher({
+const f = createFetcher({
   url: "http://localhost:8080/graphql",
   wsUrl: "ws://localhost:8080/graphql",
   wsProtocols: ["graphql-ws"],
