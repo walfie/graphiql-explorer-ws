@@ -1,25 +1,11 @@
 {
-  "name": "gatsby-graphiql-explorer",
+  "name": "graphiql-explorer-ws",
   "version": "0.4.1",
-  "description": "GraphiQL IDE with custom features for Gatsby users",
+  "description": "GraphiQL with explorer and subscriptions support",
   "scripts": {
     "build": "webpack",
     "prepare": "cross-env NODE_ENV=production npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "watch": "npm run build:app -- --watch"
-  },
-  "keywords": [
-    "gatsby"
-  ],
-  "author": "",
-  "bugs": {
-    "url": "https://github.com/gatsbyjs/gatsby/issues"
-  },
-  "homepage": "https://github.com/gatsbyjs/gatsby/tree/master/packages/gatsby-graphiql-explorer#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/gatsbyjs/gatsby.git",
-    "directory": "packages/gatsby-graphiql-explorer"
   },
   "license": "MIT",
   "dependencies": {
