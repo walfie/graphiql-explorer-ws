@@ -15,33 +15,32 @@ import "./app.css";
 
 const parameters = querystring.decode(window.location.search.substr(1));
 
-// Derive a fetch URL from the current URL, sans the GraphQL parameters.
-const graphqlParamNames = {
-  query: true,
-  variables: true,
-  operationName: true,
-  explorerIsOpen: true,
-};
-const otherParams = {};
-for (var k in parameters) {
-  if (parameters.hasOwnProperty(k) && graphqlParamNames[k] !== true) {
-    otherParams[k] = parameters[k];
-  }
-}
-const fetchURL = "?" + querystring.encode(otherParams);
+function fetcher({ url, wsUrl, wsProtocols }) {
+  const defaultFetcher = (params) => {
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    })
+      .then((response) => response.json())
+      .catch(() => response.text());
+  };
 
-function graphQLFetcher(graphQLParams) {
-  return fetch(fetchURL, {
-    method: `post`,
-    headers: {
-      Accept: `application/json`,
-      "Content-Type": `application/json`,
-    },
-    body: JSON.stringify(graphQLParams),
-    credentials: `include`,
-  }).then(function (response) {
-    return response.json();
-  });
+  if (wsUrl) {
+    let subscriptionsClient = new SubscriptionClient(
+      wsUrl,
+      { reconnect: true },
+      undefined,
+      wsProtocols
+    );
+
+    return graphiQLSubscriptionsFetcher(subscriptionsClient, defaultFetcher);
+  } else {
+    return defaultFetcher;
+  }
 }
 
 // When the query and variables string is edited, update the URL bar so
@@ -66,12 +65,12 @@ function updateQueryString(params) {
 //  - default empty query
 const DEFAULT_QUERY =
   parameters.query ||
-  (window.localStorage && window.localStorage.getItem(`graphiql:query`)) ||
+  (window.localStorage && window.localStorage.getItem("graphiql:query")) ||
   null;
 
 const DEFAULT_VARIABLES =
   parameters.variables ||
-  (window.localStorage && window.localStorage.getItem(`graphiql:variables`)) ||
+  (window.localStorage && window.localStorage.getItem("graphiql:variables")) ||
   null;
 
 const QUERY_EXAMPLE_SITEMETADATA_TITLE = `#     {
@@ -121,12 +120,12 @@ ${queryExample}
 }
 
 const storedExplorerPaneState =
-  typeof parameters.explorerIsOpen !== `undefined`
-    ? parameters.explorerIsOpen === `false`
+  typeof parameters.explorerIsOpen !== "undefined"
+    ? parameters.explorerIsOpen === "false"
       ? false
       : true
     : window.localStorage
-    ? window.localStorage.getItem(`graphiql:graphiqlExplorerOpen`) !== `false`
+    ? window.localStorage.getItem("graphiql:graphiqlExplorerOpen") !== "false"
     : true;
 
 class App extends React.Component {
@@ -138,53 +137,58 @@ class App extends React.Component {
   };
 
   componentDidMount() {
-    graphQLFetcher({
-      query: getIntrospectionQuery(),
-    }).then((result) => {
-      const newState = { schema: buildClientSchema(result.data) };
+    this.props
+      .fetcher({
+        query: getIntrospectionQuery(),
+      })
+      .then((result) => {
+        const newState = { schema: buildClientSchema(result.data) };
 
-      if (this.state.query === null) {
-        try {
-          const siteMetadataType = result.data.__schema.types.find(
-            (type) => type.name === `SiteSiteMetadata` && type.kind === `OBJECT`
-          );
-          if (siteMetadataType) {
-            const titleField = siteMetadataType.fields.find(
-              (field) =>
-                field.name === `title` &&
-                field.type &&
-                field.type.kind === `SCALAR` &&
-                field.type.name === `String`
+        if (this.state.query === null) {
+          try {
+            const siteMetadataType = result.data.__schema.types.find(
+              (type) =>
+                type.name === "SiteSiteMetadata" && type.kind === "OBJECT"
             );
-
-            if (titleField) {
-              newState.query = generateDefaultFallbackQuery(
-                QUERY_EXAMPLE_SITEMETADATA_TITLE
+            if (siteMetadataType) {
+              const titleField = siteMetadataType.fields.find(
+                (field) =>
+                  field.name === "title" &&
+                  field.type &&
+                  field.type.kind === "SCALAR" &&
+                  field.type.name === "String"
               );
-            }
-          }
-          // eslint-disable-next-line no-empty
-        } catch {}
-        if (!newState.query) {
-          newState.query = generateDefaultFallbackQuery(QUERY_EXAMPLE_FALLBACK);
-        }
-      }
 
-      this.setState(newState);
-    });
+              if (titleField) {
+                newState.query = generateDefaultFallbackQuery(
+                  QUERY_EXAMPLE_SITEMETADATA_TITLE
+                );
+              }
+            }
+            // eslint-disable-next-line no-empty
+          } catch {}
+          if (!newState.query) {
+            newState.query = generateDefaultFallbackQuery(
+              QUERY_EXAMPLE_FALLBACK
+            );
+          }
+        }
+
+        this.setState(newState);
+      });
 
     const editor = this._graphiql.getQueryEditor();
-    editor.setOption(`extraKeys`, {
+    editor.setOption("extraKeys", {
       ...(editor.options.extraKeys || {}),
       "Shift-Alt-LeftClick": this._handleInspectOperation,
     });
   }
 
   _handleInspectOperation = (cm, mousePos) => {
-    const parsedQuery = parse(this.state.query || ``);
+    const parsedQuery = parse(this.state.query || "");
 
     if (!parsedQuery) {
-      console.error(`Couldn't parse query document`);
+      console.error("Couldn't parse query document");
       return null;
     }
 
@@ -200,7 +204,7 @@ class App extends React.Component {
 
     const def = parsedQuery.definitions.find((definition) => {
       if (!definition.loc) {
-        console.log(`Missing location information for definition`);
+        console.log("Missing location information for definition");
         return false;
       }
 
@@ -210,24 +214,24 @@ class App extends React.Component {
 
     if (!def) {
       console.error(
-        `Unable to find definition corresponding to mouse position`
+        "Unable to find definition corresponding to mouse position"
       );
       return null;
     }
 
     const operationKind =
-      def.kind === `OperationDefinition`
+      def.kind === "OperationDefinition"
         ? def.operation
-        : def.kind === `FragmentDefinition`
-        ? `fragment`
-        : `unknown`;
+        : def.kind === "FragmentDefinition"
+        ? "fragment"
+        : "unknown";
 
     const operationName =
-      def.kind === `OperationDefinition` && !!def.name
+      def.kind === "OperationDefinition" && !!def.name
         ? def.name.value
-        : def.kind === `FragmentDefinition` && !!def.name
+        : def.kind === "FragmentDefinition" && !!def.name
         ? def.name.value
-        : `unknown`;
+        : "unknown";
 
     const selector = `.graphiql-explorer-root #${operationKind}-${operationName}`;
 
@@ -250,7 +254,7 @@ class App extends React.Component {
     const newExplorerIsOpen = !this.state.explorerIsOpen;
     if (window.localStorage) {
       window.localStorage.setItem(
-        `graphiql:graphiqlExplorerOpen`,
+        "graphiql:graphiqlExplorerOpen",
         newExplorerIsOpen
       );
     }
@@ -276,7 +280,7 @@ class App extends React.Component {
         />
         <GraphiQL
           ref={(ref) => (this._graphiql = ref)}
-          fetcher={graphQLFetcher}
+          fetcher={this.props.fetcher}
           schema={schema}
           query={query}
           variables={variables}
@@ -307,4 +311,11 @@ class App extends React.Component {
   }
 }
 
-ReactDOM.render(<App />, document.getElementById(`root`));
+// TODO: Configurable
+const f = fetcher({
+  url: "http://localhost:8080/graphql",
+  wsUrl: "ws://localhost:8080/graphql",
+  wsProtocols: ["graphql-ws"],
+});
+
+ReactDOM.render(<App fetcher={f} />, document.getElementById("root"));
