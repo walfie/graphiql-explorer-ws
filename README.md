@@ -9,12 +9,3 @@ the js entrypoint to be configurable for use-cases outside of gatsby
 [gatsby-graphiql-explorer]: https://github.com/gatsbyjs/gatsby/tree/master/packages/gatsby-graphiql-explorer
 [gatsby-js/gatsby]: https://github.com/gatsbyjs/gatsby
 [subscriptions-transport-ws]: https://github.com/apollographql/subscriptions-transport-ws
-
-## Development
-
-```
-npm install
-npm run build
-```
-
-Output can be found in the `dist` directory.

@@ -1,7 +1,10 @@
 const path = require("path");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const webpack = require("webpack");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const TerserJSPlugin = require("terser-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 module.exports = (env, options) => {
   const isProd = options.mode === "production";
@@ -14,7 +17,24 @@ module.exports = (env, options) => {
       library: "GraphiQLExplorerWs",
       libraryTarget: "umd",
     },
+    optimization: {
+      minimizer: [new TerserJSPlugin({}), new OptimizeCSSAssetsPlugin({})],
+    },
     devtool: false,
+    plugins: [
+      new CleanWebpackPlugin(),
+      new MiniCssExtractPlugin({
+        filename: "styles.css",
+      }),
+      new HtmlWebpackPlugin({
+        template: path.resolve(__dirname, "src", "index.ejs"),
+        filename: "index.html",
+        inject: false,
+      }),
+      new webpack.DefinePlugin({
+        "process.env.NODE_ENV": JSON.stringify(options.mode),
+      }),
+    ],
     module: {
       rules: [
         {
@@ -56,21 +76,10 @@ module.exports = (env, options) => {
         },
         {
           test: /\.css$/,
-          use: [{ loader: "style-loader" }, { loader: "css-loader" }],
+          use: [MiniCssExtractPlugin.loader, "css-loader"],
         },
       ],
     },
-    plugins: [
-      new CleanWebpackPlugin(),
-      new HtmlWebpackPlugin({
-        template: path.resolve(__dirname, "src", "index.ejs"),
-        filename: "index.html",
-        inject: false,
-      }),
-      new webpack.DefinePlugin({
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-      }),
-    ],
     stats: {
       warnings: false,
     },
