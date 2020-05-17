@@ -13,7 +13,9 @@ import "whatwg-fetch";
 import "graphiql/graphiql.css";
 import "./app.css";
 
-const parameters = querystring.decode(window.location.search.substr(1));
+function getParamsFromQueryString() {
+  return querystring.decode(window.location.search.substr(1));
+}
 
 function createFetcher({ url, wsUrl, wsProtocols }) {
   const defaultFetcher = (params) => {
@@ -46,16 +48,32 @@ function createFetcher({ url, wsUrl, wsProtocols }) {
 // When the query and variables string is edited, update the URL bar so
 // that it can be easily shared.
 function onEditVariables(newVariables) {
-  parameters.variables = newVariables;
-  updateQueryString(parameters);
+  setExternalState("variables", newVariables);
 }
+
 function onEditOperationName(newOperationName) {
-  parameters.operationName = newOperationName;
-  updateQueryString(parameters);
+  setExternalState("operationName", newOperationName);
 }
 
 function updateQueryString(params) {
   window.history.replaceState(null, null, "?" + querystring.encode(params));
+}
+
+function getExternalState(key) {
+  const queryParams = getParamsFromQueryString();
+  return queryParams[key] || getLocalStorage(`graphiql:${key}`);
+}
+
+function setExternalState(key, value) {
+  const queryParams = getParamsFromQueryString();
+  queryParams[key] = value;
+  window.history.replaceState(
+    null,
+    null,
+    "?" + querystring.encode(queryParams)
+  );
+
+  window.localStorage && window.localStorage.setItem(`graphiql:${key}`, value);
 }
 
 function getLocalStorage(key) {
@@ -94,13 +112,6 @@ const DEFAULT_QUERY = `# Welcome to GraphiQL
 #
 `;
 
-function explorerIsOpen(params) {
-  if (params.explorerIsOpen === "undefined") {
-    return getLocalStorage("graphiql:graphiqlExplorerOpen") !== "false";
-  } else {
-    return params.explorerIsOpen !== "false";
-  }
-}
 class App extends React.Component {
   // Priority order of the query/variables that show up on opening the page:
   // - query from query string (if set)
@@ -110,13 +121,11 @@ class App extends React.Component {
   // TODO: Don't depend on global `parameters` state
   state = {
     schema: null,
-    query:
-      this.props.query || parameters.query || getLocalStorage("graphiql:query"),
-    variables:
-      this.props.variables ||
-      parameters.variables ||
-      getLocalStorage("graphiql:variables"),
-    explorerIsOpen: this.props.explorerIsOpen || explorerIsOpen(parameters),
+    query: this.props.query || getExternalState("query"),
+    variables: this.props.variables || getExternalState("variables"),
+    explorerIsOpen:
+      this.props.explorerIsOpen ||
+      getExternalState("explorerIsOpen") !== "false",
   };
 
   componentDidMount() {
@@ -198,22 +207,14 @@ class App extends React.Component {
   };
 
   _handleEditQuery = (query) => {
-    parameters.query = query;
-    updateQueryString(parameters);
+    setExternalState("query", query);
     this.setState({ query });
   };
 
   _handleToggleExplorer = () => {
-    const newExplorerIsOpen = !this.state.explorerIsOpen;
-    if (window.localStorage) {
-      window.localStorage.setItem(
-        "graphiql:graphiqlExplorerOpen",
-        newExplorerIsOpen
-      );
-    }
-    parameters.explorerIsOpen = newExplorerIsOpen;
-    updateQueryString(parameters);
-    this.setState({ explorerIsOpen: newExplorerIsOpen });
+    const explorerIsOpen = !this.state.explorerIsOpen;
+    setExternalState("explorerIsOpen", explorerIsOpen);
+    this.setState({ explorerIsOpen });
   };
 
   render() {
