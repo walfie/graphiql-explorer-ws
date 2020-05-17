@@ -92,7 +92,12 @@ class ExternalState {
 
   set(key, value) {
     const queryParams = getParamsFromQueryString();
-    queryParams[key] = value;
+    if (value) {
+      queryParams[key] = value;
+    } else {
+      delete queryParams[key];
+    }
+
     window.history.replaceState(
       null,
       null,
@@ -111,11 +116,14 @@ class App extends React.Component {
   // - query stored in localStorage (which graphiql sets when closing window)
   // - default empty query
 
-  // TODO: Don't depend on global `parameters` state
   state = {
     schema: null,
-    query: this.props.query || this.externalState.get("query"),
-    variables: this.props.variables || this.externalState.get("variables"),
+    query:
+      this.externalState.get("query") ||
+      this.props.defaultQuery ||
+      DEFAULT_QUERY,
+    variables:
+      this.externalState.get("variables") || this.props.defaultVariables || "",
     explorerIsOpen:
       this.props.explorerIsOpen ||
       this.externalState.get("explorerIsOpen") !== "false",
@@ -210,12 +218,14 @@ class App extends React.Component {
     this.setState({ explorerIsOpen });
   };
 
-  onEditOperationName = (newOperationName) => {
-    this.externalState.set("operationName", newOperationName);
+  onEditOperationName = (operationName) => {
+    this.externalState.set("operationName", operationName);
+    this.setState({ operationName });
   };
 
-  onEditVariables = (newVariables) => {
-    this.externalState.set("variables", newVariables);
+  onEditVariables = (variables) => {
+    this.externalState.set("variables", variables);
+    this.setState({ variables });
   };
 
   render() {
@@ -239,7 +249,7 @@ class App extends React.Component {
           schema={schema}
           query={query}
           variables={variables}
-          onEditQuery={this.onEditVariables}
+          onEditQuery={this.onEditQuery}
           onEditVariables={this.onEditVariables}
           onEditOperationName={this.onEditOperationName}
         >
@@ -266,8 +276,16 @@ class App extends React.Component {
   }
 }
 
-function render(fetcher, elem) {
-  ReactDOM.render(<App fetcher={fetcher} />, elem);
+function render({ fetcher, defaultQuery, defaultVariables }, elem) {
+  const app = (
+    <App
+      fetcher={fetcher}
+      defaultQuery={defaultQuery}
+      defaultVariables={defaultVariables}
+    />
+  );
+
+  ReactDOM.render(app, elem);
 }
 
 export { createFetcher, App, ExternalState, render };

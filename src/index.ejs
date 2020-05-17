@@ -15,11 +15,17 @@
 
     <script>
       const fetcher = GraphiQLExplorerWs.createFetcher({
-        url: "http://localhost:8080/graphql",
+        url: "https://graphql-pokemon.now.sh/",
+
+        // Can't find a good example of a public graphql server with subscriptions
         wsUrl: "ws://localhost:8080/graphql",
         wsProtocols: ["graphql-ws", "graphql-subscription"],
       });
-      GraphiQLExplorerWs.render(fetcher, document.getElementById("root"));
+      const props = {
+        fetcher,
+        defaultQuery: `{ pokemons(first: 10) { number name } }`,
+      };
+      GraphiQLExplorerWs.render(props, document.getElementById("root"));
     </script>
   </body>
 </html>
