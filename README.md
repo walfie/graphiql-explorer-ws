@@ -18,4 +18,3 @@ npm run build
 ```
 
 Output can be found in the `dist` directory.
-

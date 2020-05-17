@@ -1,40 +1,40 @@
-import React from "react"
-import ReactDOM from "react-dom"
+import React from "react";
+import ReactDOM from "react-dom";
 
-import GraphiQL from "graphiql"
-import GraphiQLExplorer from "graphiql-explorer"
-import { getIntrospectionQuery, buildClientSchema, parse } from "graphql"
-import CodeExporter from "graphiql-code-exporter"
-import snippets from "./snippets"
+import GraphiQL from "graphiql";
+import GraphiQLExplorer from "graphiql-explorer";
+import { getIntrospectionQuery, buildClientSchema, parse } from "graphql";
+import CodeExporter from "graphiql-code-exporter";
+import snippets from "./snippets";
 
-import "whatwg-fetch"
+import "whatwg-fetch";
 
-import "graphiql/graphiql.css"
-import "./app.css"
-import "graphiql-code-exporter/CodeExporter.css"
+import "graphiql/graphiql.css";
+import "./app.css";
+import "graphiql-code-exporter/CodeExporter.css";
 
-const parameters = {}
+const parameters = {};
 window.location.search
   .substr(1)
   .split(`&`)
   .forEach(function (entry) {
-    var eq = entry.indexOf(`=`)
+    var eq = entry.indexOf(`=`);
     if (eq >= 0) {
       parameters[decodeURIComponent(entry.slice(0, eq))] = decodeURIComponent(
         entry.slice(eq + 1)
-      )
+      );
     }
-  })
+  });
 // Produce a Location query string from a parameter object.
 function locationQuery(params) {
   return (
     `?` +
     Object.keys(params)
       .map(function (key) {
-        return encodeURIComponent(key) + `=` + encodeURIComponent(params[key])
+        return encodeURIComponent(key) + `=` + encodeURIComponent(params[key]);
       })
       .join(`&`)
-  )
+  );
 }
 
 // Derive a fetch URL from the current URL, sans the GraphQL parameters.
@@ -43,14 +43,14 @@ const graphqlParamNames = {
   variables: true,
   operationName: true,
   explorerIsOpen: true,
-}
-const otherParams = {}
+};
+const otherParams = {};
 for (var k in parameters) {
   if (parameters.hasOwnProperty(k) && graphqlParamNames[k] !== true) {
-    otherParams[k] = parameters[k]
+    otherParams[k] = parameters[k];
   }
 }
-const fetchURL = locationQuery(otherParams)
+const fetchURL = locationQuery(otherParams);
 
 function graphQLFetcher(graphQLParams) {
   return fetch(fetchURL, {
@@ -62,22 +62,22 @@ function graphQLFetcher(graphQLParams) {
     body: JSON.stringify(graphQLParams),
     credentials: `include`,
   }).then(function (response) {
-    return response.json()
-  })
+    return response.json();
+  });
 }
 
 // When the query and variables string is edited, update the URL bar so
 // that it can be easily shared.
 function onEditVariables(newVariables) {
-  parameters.variables = newVariables
-  updateURL()
+  parameters.variables = newVariables;
+  updateURL();
 }
 function onEditOperationName(newOperationName) {
-  parameters.operationName = newOperationName
-  updateURL()
+  parameters.operationName = newOperationName;
+  updateURL();
 }
 function updateURL() {
-  history.replaceState(null, null, locationQuery(parameters))
+  history.replaceState(null, null, locationQuery(parameters));
 }
 
 // We control query, so we need to recreate initial query text that show up
@@ -88,12 +88,12 @@ function updateURL() {
 const DEFAULT_QUERY =
   parameters.query ||
   (window.localStorage && window.localStorage.getItem(`graphiql:query`)) ||
-  null
+  null;
 
 const DEFAULT_VARIABLES =
   parameters.variables ||
   (window.localStorage && window.localStorage.getItem(`graphiql:variables`)) ||
-  null
+  null;
 
 const QUERY_EXAMPLE_SITEMETADATA_TITLE = `#     {
 #       site {
@@ -101,7 +101,7 @@ const QUERY_EXAMPLE_SITEMETADATA_TITLE = `#     {
 #           title
 #         }
 #       }
-#     }`
+#     }`;
 
 const QUERY_EXAMPLE_FALLBACK = `#     {
 #       allSitePage {
@@ -109,7 +109,7 @@ const QUERY_EXAMPLE_FALLBACK = `#     {
 #           path
 #         }
 #       }
-#     }`
+#     }`;
 
 function generateDefaultFallbackQuery(queryExample) {
   return `# Welcome to GraphiQL
@@ -138,7 +138,7 @@ ${queryExample}
 #
 #   Auto Complete:  Ctrl-Space (or just start typing)
 #
-`
+`;
 }
 
 const storedExplorerPaneState =
@@ -148,7 +148,7 @@ const storedExplorerPaneState =
       : true
     : window.localStorage
     ? window.localStorage.getItem(`graphiql:graphiqlExplorerOpen`) !== `false`
-    : true
+    : true;
 
 const storedCodeExporterPaneState =
   typeof parameters.codeExporterIsOpen !== `undefined`
@@ -158,7 +158,7 @@ const storedCodeExporterPaneState =
     : window.localStorage
     ? window.localStorage.getItem(`graphiql:graphiqlCodeExporterOpen`) ===
       `true`
-    : false
+    : false;
 
 class App extends React.Component {
   state = {
@@ -167,82 +167,84 @@ class App extends React.Component {
     variables: DEFAULT_VARIABLES,
     explorerIsOpen: storedExplorerPaneState,
     codeExporterIsOpen: storedCodeExporterPaneState,
-  }
+  };
 
   componentDidMount() {
     graphQLFetcher({
       query: getIntrospectionQuery(),
-    }).then(result => {
-      const newState = { schema: buildClientSchema(result.data) }
+    }).then((result) => {
+      const newState = { schema: buildClientSchema(result.data) };
 
       if (this.state.query === null) {
         try {
           const siteMetadataType = result.data.__schema.types.find(
-            type => type.name === `SiteSiteMetadata` && type.kind === `OBJECT`
-          )
+            (type) => type.name === `SiteSiteMetadata` && type.kind === `OBJECT`
+          );
           if (siteMetadataType) {
             const titleField = siteMetadataType.fields.find(
-              field =>
+              (field) =>
                 field.name === `title` &&
                 field.type &&
                 field.type.kind === `SCALAR` &&
                 field.type.name === `String`
-            )
+            );
 
             if (titleField) {
               newState.query = generateDefaultFallbackQuery(
                 QUERY_EXAMPLE_SITEMETADATA_TITLE
-              )
+              );
             }
           }
           // eslint-disable-next-line no-empty
         } catch {}
         if (!newState.query) {
-          newState.query = generateDefaultFallbackQuery(QUERY_EXAMPLE_FALLBACK)
+          newState.query = generateDefaultFallbackQuery(QUERY_EXAMPLE_FALLBACK);
         }
       }
 
-      this.setState(newState)
-    })
+      this.setState(newState);
+    });
 
-    const editor = this._graphiql.getQueryEditor()
+    const editor = this._graphiql.getQueryEditor();
     editor.setOption(`extraKeys`, {
       ...(editor.options.extraKeys || {}),
       "Shift-Alt-LeftClick": this._handleInspectOperation,
-    })
+    });
   }
 
   _handleInspectOperation = (cm, mousePos) => {
-    const parsedQuery = parse(this.state.query || ``)
+    const parsedQuery = parse(this.state.query || ``);
 
     if (!parsedQuery) {
-      console.error(`Couldn't parse query document`)
-      return null
+      console.error(`Couldn't parse query document`);
+      return null;
     }
 
-    const token = cm.getTokenAt(mousePos)
-    const start = { line: mousePos.line, ch: token.start }
-    const end = { line: mousePos.line, ch: token.end }
+    const token = cm.getTokenAt(mousePos);
+    const start = { line: mousePos.line, ch: token.start };
+    const end = { line: mousePos.line, ch: token.end };
     const relevantMousePos = {
       start: cm.indexFromPos(start),
       end: cm.indexFromPos(end),
-    }
+    };
 
-    const position = relevantMousePos
+    const position = relevantMousePos;
 
-    const def = parsedQuery.definitions.find(definition => {
+    const def = parsedQuery.definitions.find((definition) => {
       if (!definition.loc) {
-        console.log(`Missing location information for definition`)
-        return false
+        console.log(`Missing location information for definition`);
+        return false;
       }
 
-      const { start, end } = definition.loc
-      return start <= position.start && end >= position.end
-    })
+      const { start, end } = definition.loc;
+      return start <= position.start && end >= position.end;
+    });
 
     if (!def) {
-      console.error(`Unable to find definition corresponding to mouse position`)
-      return null
+      console.error(
+        `Unable to find definition corresponding to mouse position`
+      );
+      return null;
     }
 
     const operationKind =
@@ -250,60 +252,60 @@ class App extends React.Component {
         ? def.operation
         : def.kind === `FragmentDefinition`
         ? `fragment`
-        : `unknown`
+        : `unknown`;
 
     const operationName =
       def.kind === `OperationDefinition` && !!def.name
         ? def.name.value
         : def.kind === `FragmentDefinition` && !!def.name
         ? def.name.value
-        : `unknown`
+        : `unknown`;
 
-    const selector = `.graphiql-explorer-root #${operationKind}-${operationName}`
+    const selector = `.graphiql-explorer-root #${operationKind}-${operationName}`;
 
-    const el = document.querySelector(selector)
+    const el = document.querySelector(selector);
     if (el) {
-      el.scrollIntoView()
-      return true
+      el.scrollIntoView();
+      return true;
     }
 
-    return false
-  }
+    return false;
+  };
 
-  _handleEditQuery = query => {
-    parameters.query = query
-    updateURL()
-    this.setState({ query })
-  }
+  _handleEditQuery = (query) => {
+    parameters.query = query;
+    updateURL();
+    this.setState({ query });
+  };
 
   _handleToggleExplorer = () => {
-    const newExplorerIsOpen = !this.state.explorerIsOpen
+    const newExplorerIsOpen = !this.state.explorerIsOpen;
     if (window.localStorage) {
       window.localStorage.setItem(
         `graphiql:graphiqlExplorerOpen`,
         newExplorerIsOpen
-      )
+      );
     }
-    parameters.explorerIsOpen = newExplorerIsOpen
-    updateURL()
-    this.setState({ explorerIsOpen: newExplorerIsOpen })
-  }
+    parameters.explorerIsOpen = newExplorerIsOpen;
+    updateURL();
+    this.setState({ explorerIsOpen: newExplorerIsOpen });
+  };
 
   _handleToggleExporter = () => {
-    const newCodeExporterIsOpen = !this.state.codeExporterIsOpen
+    const newCodeExporterIsOpen = !this.state.codeExporterIsOpen;
     if (window.localStorage) {
       window.localStorage.setItem(
         `graphiql:graphiqlCodeExporterOpen`,
         newCodeExporterIsOpen
-      )
+      );
     }
-    parameters.codeExporterIsOpen = newCodeExporterIsOpen
-    updateURL()
-    this.setState({ codeExporterIsOpen: newCodeExporterIsOpen })
-  }
+    parameters.codeExporterIsOpen = newCodeExporterIsOpen;
+    updateURL();
+    this.setState({ codeExporterIsOpen: newCodeExporterIsOpen });
+  };
 
   render() {
-    const { query, variables, schema, codeExporterIsOpen } = this.state
+    const { query, variables, schema, codeExporterIsOpen } = this.state;
     const codeExporter = codeExporterIsOpen ? (
       <CodeExporter
         hideCodeExporter={this._handleToggleExporter}
@@ -311,7 +313,7 @@ class App extends React.Component {
         query={query}
         codeMirrorTheme="default"
       />
-    ) : null
+    ) : null;
 
     return (
       <React.Fragment>
@@ -321,12 +323,12 @@ class App extends React.Component {
           onEdit={this._handleEditQuery}
           explorerIsOpen={this.state.explorerIsOpen}
           onToggleExplorer={this._handleToggleExplorer}
-          onRunOperation={operationName =>
+          onRunOperation={(operationName) =>
             this._graphiql.handleRunQuery(operationName)
           }
         />
         <GraphiQL
-          ref={ref => (this._graphiql = ref)}
+          ref={(ref) => (this._graphiql = ref)}
           fetcher={graphQLFetcher}
           schema={schema}
           query={query}
@@ -360,8 +362,8 @@ class App extends React.Component {
         </GraphiQL>
         {codeExporter}
       </React.Fragment>
-    )
+    );
   }
 }
 
-ReactDOM.render(<App />, document.getElementById(`root`))
+ReactDOM.render(<App />, document.getElementById(`root`));
