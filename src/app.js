@@ -8,8 +8,6 @@ import { getIntrospectionQuery, buildClientSchema, parse } from "graphql";
 import { SubscriptionClient } from "subscriptions-transport-ws";
 import { graphQLFetcher as graphiQLSubscriptionsFetcher } from "graphiql-subscriptions-fetcher/dist/fetcher";
 
-import "whatwg-fetch";
-
 import "graphiql/graphiql.css";
 import "./app.css";
 
