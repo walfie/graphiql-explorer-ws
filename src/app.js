@@ -13,10 +13,6 @@ import "whatwg-fetch";
 import "graphiql/graphiql.css";
 import "./app.css";
 
-function getParamsFromQueryString() {
-  return querystring.decode(window.location.search.substr(1));
-}
-
 function createFetcher({ url, wsUrl, wsProtocols }) {
   const defaultFetcher = (params) => {
     return fetch(url, {
@@ -44,42 +40,6 @@ function createFetcher({ url, wsUrl, wsProtocols }) {
     return defaultFetcher;
   }
 }
-
-// When the query and variables string is edited, update the URL bar so
-// that it can be easily shared.
-function onEditVariables(newVariables) {
-  setExternalState("variables", newVariables);
-}
-
-function onEditOperationName(newOperationName) {
-  setExternalState("operationName", newOperationName);
-}
-
-function updateQueryString(params) {
-  window.history.replaceState(null, null, "?" + querystring.encode(params));
-}
-
-function getExternalState(key) {
-  const queryParams = getParamsFromQueryString();
-  return queryParams[key] || getLocalStorage(`graphiql:${key}`);
-}
-
-function setExternalState(key, value) {
-  const queryParams = getParamsFromQueryString();
-  queryParams[key] = value;
-  window.history.replaceState(
-    null,
-    null,
-    "?" + querystring.encode(queryParams)
-  );
-
-  window.localStorage && window.localStorage.setItem(`graphiql:${key}`, value);
-}
-
-function getLocalStorage(key) {
-  return (window.localStorage && window.localStorage.getItem(key)) || null;
-}
-
 const DEFAULT_QUERY = `# Welcome to GraphiQL
 #
 # GraphiQL is an in-browser tool for writing, validating, and
@@ -112,7 +72,42 @@ const DEFAULT_QUERY = `# Welcome to GraphiQL
 #
 `;
 
+function getParamsFromQueryString() {
+  return querystring.decode(window.location.search.substr(1));
+}
+
+class ExternalState {
+  constructor(prefix) {
+    this.prefix = prefix || "graphiql";
+  }
+
+  get(key) {
+    const queryParams = getParamsFromQueryString();
+
+    return (
+      queryParams[key] ||
+      (window.localStorage &&
+        window.localStorage.getItem(`${this.prefix}:${key}`)) ||
+      null
+    );
+  }
+
+  set(key, value) {
+    const queryParams = getParamsFromQueryString();
+    queryParams[key] = value;
+    window.history.replaceState(
+      null,
+      null,
+      "?" + querystring.encode(queryParams)
+    );
+
+    window.localStorage &&
+      window.localStorage.setItem(`${this.prefix}:${key}`, value);
+  }
+}
+
 class App extends React.Component {
+  externalState = this.props.externalState || new ExternalState();
   // Priority order of the query/variables that show up on opening the page:
   // - query from query string (if set)
   // - query stored in localStorage (which graphiql sets when closing window)
@@ -121,11 +116,11 @@ class App extends React.Component {
   // TODO: Don't depend on global `parameters` state
   state = {
     schema: null,
-    query: this.props.query || getExternalState("query"),
-    variables: this.props.variables || getExternalState("variables"),
+    query: this.props.query || this.externalState.get("query"),
+    variables: this.props.variables || this.externalState.get("variables"),
     explorerIsOpen:
       this.props.explorerIsOpen ||
-      getExternalState("explorerIsOpen") !== "false",
+      this.externalState.get("explorerIsOpen") !== "false",
   };
 
   componentDidMount() {
@@ -142,11 +137,11 @@ class App extends React.Component {
     const editor = this._graphiql.getQueryEditor();
     editor.setOption("extraKeys", {
       ...(editor.options.extraKeys || {}),
-      "Shift-Alt-LeftClick": this._handleInspectOperation,
+      "Shift-Alt-LeftClick": this.handleInspectOperation,
     });
   }
 
-  _handleInspectOperation = (cm, mousePos) => {
+  handleInspectOperation = (cm, mousePos) => {
     const parsedQuery = parse(this.state.query || "");
 
     if (!parsedQuery) {
@@ -206,15 +201,23 @@ class App extends React.Component {
     return false;
   };
 
-  _handleEditQuery = (query) => {
-    setExternalState("query", query);
+  onEditQuery = (query) => {
+    this.externalState.set("query", query);
     this.setState({ query });
   };
 
-  _handleToggleExplorer = () => {
+  toggleExplorer = () => {
     const explorerIsOpen = !this.state.explorerIsOpen;
-    setExternalState("explorerIsOpen", explorerIsOpen);
+    this.externalState.set("explorerIsOpen", explorerIsOpen);
     this.setState({ explorerIsOpen });
+  };
+
+  onEditOperationName = (newOperationName) => {
+    this.externalState.set("operationName", newOperationName);
+  };
+
+  onEditVariables = (newVariables) => {
+    this.externalState.set("variables", newVariables);
   };
 
   render() {
@@ -225,9 +228,9 @@ class App extends React.Component {
         <GraphiQLExplorer
           schema={schema}
           query={query}
-          onEdit={this._handleEditQuery}
+          onEdit={this.onEditQuery}
           explorerIsOpen={this.state.explorerIsOpen}
-          onToggleExplorer={this._handleToggleExplorer}
+          onToggleExplorer={this.toggleExplorer}
           onRunOperation={(operationName) =>
             this._graphiql.handleRunQuery(operationName)
           }
@@ -238,9 +241,9 @@ class App extends React.Component {
           schema={schema}
           query={query}
           variables={variables}
-          onEditQuery={this._handleEditQuery}
-          onEditVariables={onEditVariables}
-          onEditOperationName={onEditOperationName}
+          onEditQuery={this.onEditVariables}
+          onEditVariables={this.onEditVariables}
+          onEditOperationName={this.onEditOperationName}
         >
           <GraphiQL.Toolbar>
             <GraphiQL.Button
@@ -254,7 +257,7 @@ class App extends React.Component {
               title="Show History"
             />
             <GraphiQL.Button
-              onClick={this._handleToggleExplorer}
+              onClick={this.toggleExplorer}
               label="Explorer"
               title="Toggle Explorer"
             />
@@ -265,11 +268,8 @@ class App extends React.Component {
   }
 }
 
-// TODO: Configurable
-const f = createFetcher({
-  url: "http://localhost:8080/graphql",
-  wsUrl: "ws://localhost:8080/graphql",
-  wsProtocols: ["graphql-ws"],
-});
+function render(fetcher, elem) {
+  ReactDOM.render(<App fetcher={fetcher} />, elem);
+}
 
-ReactDOM.render(<App fetcher={f} />, document.getElementById("root"));
+export { createFetcher, App, ExternalState, render };

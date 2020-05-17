@@ -13,5 +13,14 @@
       type="text/javascript"
       src="<%= htmlWebpackPlugin.files.chunks.main.entry %>?<%= htmlWebpackPlugin.files.chunks.main.hash %>"
     ></script>
+
+    <script>
+      const fetcher = GraphiQLExplorerWs.createFetcher({
+        url: "http://localhost:8080/graphql",
+        wsUrl: "ws://localhost:8080/graphql",
+        wsProtocols: ["graphql-ws"],
+      });
+      GraphiQLExplorerWs.render(fetcher, document.getElementById("root"));
+    </script>
   </body>
 </html>
