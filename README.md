@@ -1,16 +1,21 @@
-# gatsby-graphiql-explorer
+# graphiql-explorer-ws
 
-A package to extend the default [GraphiQL][graphiql] IDE with useful features for Gatsby users.
+Extracted from the [gatsby-graphiql-explorer] package in [gatsby-js/gatsby].
 
-_Note:_ accessible at `http://localhost:8000/___graphql` after running `gatsby develop`
+The intent is to add support for [subscriptions-transport-ws], and for
+the js entrypoint to be configurable for use-cases outside of gatsby
+(for the script be included and initialized manually in standalone `index.html` files).
 
-![Gatsby GraphiQL Explorer](./assets/gatsby-graphiql-explorer.png)
+[gatsby-graphiql-explorer]: https://github.com/gatsbyjs/gatsby/tree/master/packages/gatsby-graphiql-explorer
+[gatsby-js/gatsby]: https://github.com/gatsbyjs/gatsby
+[subscriptions-transport-ws]: https://github.com/apollographql/subscriptions-transport-ws
 
-## Features
+## Development
 
-- Offline support - for when you need to work on your excellent Gatsby app on a plane, train, or elsewhere off the grid
-- [GraphiQL Explorer][graphiql-explorer] - an interactive explorer plugin to visually create and interact with the GraphQL schema
-- _All_ the expected features you know and love from [GraphiQL][graphiql]
+```
+npm install
+npm run build
+```
 
-[graphiql]: https://github.com/graphql/graphiql
-[graphiql-explorer]: https://github.com/OneGraph/graphiql-explorer
+Output can be found in the `dist` directory.
+

@@ -7,7 +7,7 @@ module.exports = {
   entry: path.join(__dirname, `app.js`),
   mode,
   output: {
-    path: path.join(__dirname, `..`, `..`),
+    path: path.join(__dirname, `..`, `..`, `dist`),
     filename: `./app.js`,
   },
   devtool: false,
