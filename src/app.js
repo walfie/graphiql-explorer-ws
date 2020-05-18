@@ -92,11 +92,7 @@ class ExternalState {
 
   set(key, value) {
     const queryParams = getParamsFromQueryString();
-    if (value) {
-      queryParams[key] = value;
-    } else {
-      delete queryParams[key];
-    }
+    queryParams[key] = value;
 
     window.history.replaceState(
       null,
@@ -123,10 +119,10 @@ class App extends React.Component {
       this.props.defaultQuery ||
       DEFAULT_QUERY,
     variables:
-      this.externalState.get("variables") || this.props.defaultVariables || "",
-    explorerIsOpen:
-      this.props.explorerIsOpen ||
-      this.externalState.get("explorerIsOpen") !== "false",
+      this.externalState.get("variables") ||
+      this.props.defaultVariables ||
+      null,
+    explorerIsOpen: this.externalState.get("explorerIsOpen") !== "false",
   };
 
   componentDidMount() {
@@ -220,12 +216,10 @@ class App extends React.Component {
 
   onEditOperationName = (operationName) => {
     this.externalState.set("operationName", operationName);
-    this.setState({ operationName });
   };
 
   onEditVariables = (variables) => {
     this.externalState.set("variables", variables);
-    this.setState({ variables });
   };
 
   render() {
