@@ -29,7 +29,7 @@
     "clean-webpack-plugin": "^3.0.0",
     "core-js": "^2.6.11",
     "css-loader": "^1.0.1",
-    "graphiql": "^0.17.5",
+    "graphiql": "^1.4.7",
     "graphiql-code-exporter": "^2.0.8",
     "graphiql-explorer": "^0.4.6",
     "graphiql-subscriptions-fetcher": "0.0.2",
