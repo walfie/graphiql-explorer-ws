@@ -34,7 +34,7 @@
     "graphiql-explorer": "^0.4.6",
     "graphiql-subscriptions-fetcher": "0.0.2",
     "graphql": "^14.6.0",
-    "html-webpack-plugin": "^3.2.0",
+    "html-webpack-plugin": "^5.5.0",
     "husky": "^4.2.5",
     "mini-css-extract-plugin": "^0.9.0",
     "npm-run-all": "4.1.5",
